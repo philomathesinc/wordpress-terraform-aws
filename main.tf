@@ -57,6 +57,29 @@ curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.pha
 chmod +x wp-cli.phar && \
 sudo mv wp-cli.phar /usr/local/bin/wp
 
+# Installing certbot
+sudo snap install core; sudo snap refresh core \
+sudo apt remove certbot -f \
+sudo snap install --classic certbot \
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+
+# Installing wordpress
+cd $PATH_TO_WP_DIRECTORY && \
+wp core download && \
+wp config create \
+--dbname=wordpress \
+--dbuser=wordpress \
+--dbpass=wordpress \
+--dbhost=$DB_HOST && \
+wp db create && \
+wp core install \
+--url=$PUBLIC_IP \
+--title="PhilomathesInc" \
+--admin_user=Philomathes \
+--admin_password=philomathes \
+--admin_email=info@philomathesinc.github.io \
+--skip-email
+
 EOF
 
   user_data_replace_on_change = true
@@ -67,7 +90,7 @@ EOF
 
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDBtg6UUh0Xckv29J7IqK4PMSnonL1U0hoYAlbs+MYZm87ObctylwHlKnpfu1yfJG/D/7p+KvPo5+Wl7m+7ZkErQwbaWYyZLOqaidnGWcOd/4Ok3nHv8ulalsmQCnFCIuJ6CMlmPaCIIIfiPbYGzmXGYPVH4uoUb0UnRdvCCgbdOu/budeEy+f2u0BYY8YhLsYBYGsbCp6Qb8kxp3cq285j5MZKYkLYQJTT2FTexokGUkFxjqszphlR6htPXmYaXixX061nW/5wzgax4Nyn+UJe5nZJd9JGh8bsaIMMk7YW1bpk89exdhS5JDSv2Gsg4RATnr7qxhFtFLTcR2+e0wzTRTxIXg/IbAxTN0R5cWJSR1t+NPgBK+iBD401/kTnaKoELz5zMGxOVwNwj4isxLygVjS0UKO27vU+iBDdbR4EpBzwVMpgJem5hJMG7njf2wWCeU30xya85SOL6ha9eBuPwACyf1UbnPtEL9WIK2BU7QXLv97cJ+zYw4gVka+t9k/yHOKWjSz2pzygo2TcdJMjzrmDaSOzn1LnrpGgQdPRqOK0wVx+ncWGTklRvaSzVgHC2fVG+oEFxwD2v+Npc3tTJWZmNznPgkuwUgIxRThMDOX10ujSbpXylkU5hOEZ1POn2PlSldUvQ5mUf8og6wv9L1eaB47hL+PN2wUWcu6Bbw== aj_das"
+  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPsjIHsbMYLNujGoTAQsksluCRp4QdTl7aUxzFls+o/z aj_das@AjD-Legion-2023-08-27"
 }
 
 resource "aws_security_group" "wordpress_server" {
@@ -108,8 +131,12 @@ resource "aws_security_group" "wordpress_server" {
   }
 }
 
-output "public" {
+output "ec2_public_ip" {
   value = aws_instance.web.public_ip
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.wordpress.endpoint
 }
 
 resource "aws_db_instance" "wordpress" {
