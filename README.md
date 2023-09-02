@@ -6,7 +6,7 @@ Mob Session #02
 
 ## Steps
 
-- [x] Find Ubuntu AMI. 
+- [x] Find Ubuntu AMI.
 - [x] Create
     - [x] Security Group (SG)
         - [x] Ingress
@@ -27,8 +27,7 @@ Mob Session #02
 - [ ] Point DNS to IP of EC2.
     - [ ] Ideally we should be using an Elastic IP.
 - [x] Use user-data to setup wordpress.
-    - [x] Install wp-cli, Nginx, PHP-FPM.
-    - [ ] Install Certbot. 
-    - [ ] Setup Nginx config.
-    - [ ] Use wp-cli to setup wordpress.
+    - [x] Install wp-cli, Nginx, PHP-FPM, Certbot.
+    - [x] Setup Nginx config.
+    - [x] Use wp-cli to setup wordpress.
     - [ ] Use Certbot to setup HTTPS.

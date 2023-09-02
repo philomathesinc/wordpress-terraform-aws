@@ -4,10 +4,17 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 4.16"
     }
+
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
   }
 
   required_version = ">= 1.2.0"
 }
+
+provider "cloudflare" {}
 
 provider "aws" {
   region = "us-east-1"
@@ -34,63 +41,36 @@ resource "aws_instance" "web" {
   key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.wordpress_server.id]
   instance_type          = "t3.micro"
-  user_data              = <<EOF
-#!/bin/bash
-# Installing dependencies
-sudo apt-get update && sudo apt-get install -y \
-curl \
-mysql-client \
-nginx \
-php-curl \
-php-gd \
-php-intl \
-php-mbstring \
-php-mysql \
-php-soap \
-php-xml \
-php-xmlrpc \
-php-zip \
-php8.1-fpm
 
-# Installing wp-cli
-curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
-chmod +x wp-cli.phar && \
-sudo mv wp-cli.phar /usr/local/bin/wp
+  connection {
+    type     = "ssh"
+    user     = "ubuntu"
+    private_key = file("ssh_key")
+    host     = self.public_ip
+  }
 
-# Installing certbot
-sudo snap install core; sudo snap refresh core \
-sudo apt remove certbot -f \
-sudo snap install --classic certbot \
-sudo ln -s /snap/bin/certbot /usr/bin/certbot
+  provisioner "file" {
+    content     = "${aws_db_instance.wordpress.endpoint}"
+    destination = "/tmp/db_host"
+  }
 
-# Installing wordpress
-cd $PATH_TO_WP_DIRECTORY && \
-wp core download && \
-wp config create \
---dbname=wordpress \
---dbuser=wordpress \
---dbpass=wordpress \
---dbhost=$DB_HOST && \
-wp db create && \
-wp core install \
---url=$PUBLIC_IP \
---title="PhilomathesInc" \
---admin_user=Philomathes \
---admin_password=philomathes \
---admin_email=info@philomathesinc.github.io \
---skip-email
+  provisioner "file" {
+    source      = "wordpress.conf"
+    destination = "/tmp/${self.public_dns}.conf"
+  }
 
-EOF
+  provisioner "remote-exec" {
+    script = "setup.sh"
+  }
 
-  user_data_replace_on_change = true
   tags = {
-    Name = "HelloWorld"
+    Name = "WordPressServer"
   }
 }
 
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
-  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPsjIHsbMYLNujGoTAQsksluCRp4QdTl7aUxzFls+o/z aj_das@AjD-Legion-2023-08-27"
+  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPUoXFooLltPd7iMNknIXTWmPIxHOEOaVdqktT1J+snq wordpress@PhilomathesInc"
 }
 
 resource "aws_security_group" "wordpress_server" {
@@ -131,14 +111,6 @@ resource "aws_security_group" "wordpress_server" {
   }
 }
 
-output "ec2_public_ip" {
-  value = aws_instance.web.public_ip
-}
-
-output "rds_endpoint" {
-  value = aws_db_instance.wordpress.endpoint
-}
-
 resource "aws_db_instance" "wordpress" {
   allocated_storage    = 10
   db_name              = "wordpress"
@@ -170,4 +142,29 @@ resource "aws_security_group" "rds" {
     protocol         = "-1"
     security_groups = [aws_security_group.wordpress_server.id]
   }
+}
+
+data "cloudflare_zone" "mriyam" {
+  name = "mriyam.com"
+}
+
+# Create a record
+resource "cloudflare_record" "www" {
+  zone_id = data.cloudflare_zone.mriyam.id
+  name    = "wordpress"
+  value   = aws_instance.web.public_ip
+  type    = "A"
+  ttl     = 120
+}
+
+output "ec2_public_ip" {
+  value = aws_instance.web.public_ip
+}
+
+output "ec2_public_dns" {
+  value = aws_instance.web.public_dns
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.wordpress.endpoint
 }
