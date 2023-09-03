@@ -1,7 +1,9 @@
 #!/bin/bash
 
-PUBLIC_DNS="$(curl http://169.254.169.254/latest/meta-data/public-hostname)"
-DB_HOST="$(cat /tmp/db_host)"
+PUBLIC_DNS="$1"
+
+DB_HOST="$2"
+
 
 # Installing dependencies
 sudo apt-get update && sudo apt-get install -y \

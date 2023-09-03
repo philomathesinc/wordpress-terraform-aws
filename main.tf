@@ -49,20 +49,6 @@ resource "aws_instance" "web" {
     host     = self.public_ip
   }
 
-  provisioner "file" {
-    content     = "${aws_db_instance.wordpress.endpoint}"
-    destination = "/tmp/db_host"
-  }
-
-  provisioner "file" {
-    source      = "wordpress.conf"
-    destination = "/tmp/${self.public_dns}.conf"
-  }
-
-  provisioner "remote-exec" {
-    script = "setup.sh"
-  }
-
   tags = {
     Name = "WordPressServer"
   }
@@ -165,6 +151,23 @@ resource "terraform_data" "tls_certificate" {
     user     = "ubuntu"
     private_key = file("ssh_key")
     host     = aws_instance.web.public_ip
+  }
+
+  provisioner "file" {
+    source      = "wordpress.conf"
+    destination = "/tmp/${cloudflare_record.wordpress.hostname}.conf"
+  }
+
+  provisioner "file" {
+    source      = "setup.sh"
+    destination = "/tmp/setup.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/setup.sh",
+      "/tmp/setup.sh ${cloudflare_record.wordpress.hostname} ${aws_db_instance.wordpress.endpoint}",
+    ]
   }
 
   provisioner "remote-exec" {
