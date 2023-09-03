@@ -143,6 +143,14 @@ resource "cloudflare_record" "wordpress" {
   ttl     = 120
 }
 
+resource "cloudflare_record" "www_wordpress" {
+  zone_id = data.cloudflare_zone.mriyam.id
+  name    = "www.wordpress"
+  value   = aws_instance.web.public_ip
+  type    = "A"
+  ttl     = 120
+}
+
 resource "terraform_data" "tls_certificate" {
   triggers_replace = cloudflare_record.wordpress.id
 
@@ -172,7 +180,7 @@ resource "terraform_data" "tls_certificate" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo certbot --nginx -d ${cloudflare_record.wordpress.hostname} -d www.${cloudflare_record.wordpress.hostname}",
+      "sudo certbot --nginx --agree-tos --register-unsafely-without-email -d ${cloudflare_record.wordpress.hostname} -d www.${cloudflare_record.wordpress.hostname}",
     ]
   }
 }
