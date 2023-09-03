@@ -40,8 +40,7 @@ sudo snap install core && \
 sudo snap refresh core && \
 sudo apt remove certbot && \
 sudo snap install --classic certbot && \
-sudo ln -s /snap/bin/certbot /usr/bin/certbot && \
-sudo certbot --nginx -d ${PUBLIC_DNS} -d ${PUBLIC_DNS}
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
 
 # Installing wordpress
 cd "/var/www/${PUBLIC_DNS}" && \

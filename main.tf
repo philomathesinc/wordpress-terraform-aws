@@ -149,12 +149,29 @@ data "cloudflare_zone" "mriyam" {
 }
 
 # Create a record
-resource "cloudflare_record" "www" {
+resource "cloudflare_record" "wordpress" {
   zone_id = data.cloudflare_zone.mriyam.id
   name    = "wordpress"
   value   = aws_instance.web.public_ip
   type    = "A"
   ttl     = 120
+}
+
+resource "terraform_data" "tls_certificate" {
+  triggers_replace = cloudflare_record.wordpress.id
+
+  connection {
+    type     = "ssh"
+    user     = "ubuntu"
+    private_key = file("ssh_key")
+    host     = aws_instance.web.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo certbot --nginx -d ${cloudflare_record.wordpress.hostname} -d www.${cloudflare_record.wordpress.hostname}",
+    ]
+  }
 }
 
 output "ec2_public_ip" {
